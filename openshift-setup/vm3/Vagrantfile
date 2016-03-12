@@ -1,0 +1,40 @@
+
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure(2) do |config|
+  config.vm.box = "bento/centos-7.1"
+
+  config.vm.hostname = "oso-node01.example.com"
+  config.vm.network "private_network", ip: "192.168.200.22"
+
+  config.vm.provider "virtualbox" do |vb|
+    vb.cpus = 1
+    vb.memory = 1024 * 1
+  end
+
+  config.vm.provision "shell", inline: <<-EOS
+
+    sudo sh -c "cat <<EOF | >> /etc/hosts
+192.168.200.20 oso-master01 oso-master01.example.com
+192.168.200.21 oso-node01 oso-node01.example.com
+192.168.200.22 oso-node02 oso-node02.example.com
+EOF"
+
+    sudo yum -y update
+    sudo yum -y install wget git net-tools bind-utils iptables-services bridge-utils bash-completion docker
+
+    sudo yum install -y docker
+    sudo sed -i "s/# INSECURE_REGISTRY='--insecure-registry'/INSECURE_REGISTRY='--insecure-registry 0.0.0.0\/0'/g"  /etc/sysconfig/docker
+    sudo systemctl start docker
+    sudo systemctl enable docker
+    sudo yum install -y epel-release
+    sudo yum install -y python-pip
+    sudo pip install docker-compose
+
+    sudo systemctl stop firewalld.service
+    sudo systemctl mask firewalld.service
+    sudo systemctl enable iptables.service
+    sudo systemctl start iptables.service
+  EOS
+end
